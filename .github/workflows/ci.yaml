@@ -1,0 +1,39 @@
+name: CI
+
+# Future CI/CD workflow: lints and tests the codebase on push/PR.
+# Placeholder — flesh out once src/ has real implementations to check.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Poetry
+        run: pipx install poetry
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+
+      - name: Lint (flake8)
+        run: poetry run flake8 src tests
+
+      - name: Format check (black)
+        run: poetry run black --check src tests
+
+      - name: Type check (mypy)
+        run: poetry run mypy src
+
+      - name: Test (pytest)
+        run: poetry run pytest

@@ -1,0 +1,9 @@
+# Formatting definitions for `black`.
+#
+# NOTE: black does not actually read a standalone `.black` file — its config
+# lives under [tool.black] in pyproject.toml. This file is kept as a
+# human-readable reference of the settings applied there; keep the two in
+# sync if you change either.
+
+line-length = 100
+target-version = ["py311"]

@@ -1,0 +1,49 @@
+masakinet/
+├── .github/
+│   └── workflows/
+│       └── ci.yaml             # Future CI/CD workflow (runs pytest, linting)
+├── data/
+│   ├── raw/                    # Raw pixel art images & text files (git ignored)
+│   └── processed/              # Preprocessed tensors or serialized local data
+├── docker/
+│   ├── docker-compose.yml      # Spins up local Qdrant instance & storage volumes
+│   └── Dockerfile              # Multi-stage production container build specification
+├── src/
+│   ├── __init__.py
+│   ├── config.py               # Pydantic Settings application config management
+│   ├── api/                    # FastAPI Layer
+│   │   ├── __init__.py
+│   │   ├── main.py             # FastAPI application initialization & middleware
+│   │   └── routers/
+│   │       ├── __init__.py
+│   │       ├── search.py       # Handles /search/text and /search/image endpoints
+│   │       └── generate.py     # Handles /generate/text and /generate/image extensions
+│   ├── db/                     # Vector Storage Operations Engine
+│   │   ├── __init__.py
+│   │   ├── client.py           # Handles connection pooling to Qdrant cluster
+│   │   └── operations.py       # Methods for creating collections, querying, & payloads
+│   ├── pipeline/               # Offline Batch Processing & Embedding Extraction
+│   │   ├── __init__.py
+│   │   ├── dataset.py          # Pure PyTorch Dataset & DataLoader implementation
+│   │   └── ingest.py           # Script to run batch embedding creation & DB seeding
+│   ├── schemas/                # Data Contract Verification
+│   │   ├── __init__.py
+│   │   └── monster.py          # Pydantic BaseModel specifications (MonsterMetadata)
+│   └── services/               # Underlying ML Inference Engines (ONNX/VLM/Diffusion)
+│       ├── __init__.py
+│       ├── embeddings.py       # Handles CLIP/SigLIP text & image ONNX inference
+│       ├── captioner.py        # Connects PaliGemma/Moondream for image-to-text
+│       └── generator.py        # Manages Stable Diffusion + LORA pixel generation
+├── tests/                      # System Verification Domain
+│   ├── __init__.py
+│   ├── conftest.py             # Pytest fixtures (mock db, mock server test client)
+│   ├── test_api.py             # Endpoint schema and integration loop verifications
+│   ├── test_data.py            # Input validation boundary and shape assertion tests
+│   └── test_models.py          # Deterministic forward pass & embedding alignment checks
+├── .black                      # Formatting definitions
+├── .flake8                     # Code linting criteria boundaries
+├── .gitignore                  # Keeps heavy weights, virtual envs, and data out of git
+├── .pre-commit-config.yaml     # Automates black, ruff, and mypy locally on git commit
+├── poetry.lock                 # Frozen deterministic dependency map
+├── pyproject.toml              # Managed dependency tracking configuration via Poetry
+└── README.md                   # System architecture documentation and run scripts
