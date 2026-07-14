@@ -10,7 +10,6 @@ from pydantic import ValidationError
 
 from src.schemas.monster import MonsterMetadata
 
-
 def test_monster_metadata_valid():
     monster = MonsterMetadata(
         monster_id="m001",
