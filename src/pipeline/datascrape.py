@@ -8,10 +8,13 @@ Usage:
 """
 
 import json
+import time
 from pathlib import Path
 from typing import Optional
+from urllib.parse import quote
 
 import httpx
+from bs4 import BeautifulSoup
 from pydantic import BaseModel, Field
 
 
@@ -23,6 +26,7 @@ class PokeApiData(BaseModel):
     flavor_text: str = Field(..., description="Most recent English flavor_text.")
     image_url: str
     image_path: Optional[Path] = None
+    biology: Optional[str] = Field(None, description="Biology section text from Bulbapedia.")
 
 
 class PokeApiScraper:
@@ -128,3 +132,89 @@ class PokeApiScraper:
         payload = [r.model_dump(mode="json") for r in records]
         out_path.write_text(json.dumps(payload, indent=2))
         return out_path
+
+
+class BulbapediaScraper:
+    """Fetch Pokemon biology text from Bulbapedia."""
+
+    BASE_URL = "https://bulbapedia.bulbagarden.net/wiki"
+
+    def __init__(self, list_path: Path | str = "data/raw/pokeapi_list.txt", delay: float = 1.0) -> None:
+        self.list_path = Path(list_path)
+        self.delay = delay
+        self._client = httpx.Client(timeout=30.0, follow_redirects=True)
+
+    def close(self) -> None:
+        self._client.close()
+
+    def __enter__(self) -> "BulbapediaScraper":
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self.close()
+
+    def _read_names(self) -> list[str]:
+        """Read Pokemon names from the list file, one per line."""
+        return [
+            line.strip()
+            for line in self.list_path.read_text().splitlines()
+            if line.strip()
+        ]
+
+    def _build_url(self, name: str) -> str:
+        """Build Bulbapedia URL for a Pokemon name."""
+        capitalized = name.capitalize()
+        encoded = quote(f"{capitalized}_(Pokémon)")
+        return f"{self.BASE_URL}/{encoded}"
+
+    def _fetch_page(self, name: str) -> Optional[str]:
+        """Fetch the HTML content of a Pokemon's Bulbapedia page."""
+        url = self._build_url(name)
+        try:
+            resp = self._client.get(url)
+            resp.raise_for_status()
+            return resp.text
+        except httpx.HTTPStatusError:
+            return None
+
+    def _extract_biology(self, html: str) -> Optional[str]:
+        """Extract text from the Biology section of the HTML."""
+        soup = BeautifulSoup(html, "html.parser")
+
+        biology_heading = soup.find("span", id="Biology")
+        if not biology_heading:
+            return None
+
+        h2 = biology_heading.parent
+        if not h2:
+            return None
+
+        paragraphs = []
+        for element in h2.find_next_siblings():
+            if element.name == "h2":
+                break
+            if element.name == "p":
+                text = element.get_text(strip=True)
+                if text:
+                    paragraphs.append(text)
+
+        return "\n\n".join(paragraphs) if paragraphs else None
+
+    def fetch_one(self, name: str) -> Optional[str]:
+        """Fetch biology text for a single Pokemon by name."""
+        html = self._fetch_page(name)
+        if html is None:
+            return None
+        return self._extract_biology(html)
+
+    def fetch_all(self) -> dict[str, Optional[str]]:
+        """Fetch biology text for every Pokemon in the list file."""
+        names = self._read_names()
+        results: dict[str, Optional[str]] = {}
+
+        for i, name in enumerate(names):
+            if i > 0:
+                time.sleep(self.delay)
+            results[name] = self.fetch_one(name)
+
+        return results

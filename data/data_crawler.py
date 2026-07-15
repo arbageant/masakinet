@@ -1,6 +1,7 @@
-"""Data crawler for PokeAPI.
+"""Data crawler for PokeAPI and Bulbapedia.
 
-Fetches Pokemon data from pokeapi.co using the PokeApiScraper class
+Fetches Pokemon data from pokeapi.co and bulbapedia.bulbagarden.net
+using the PokeApiScraper and BulbapediaScraper classes,
 and stores it locally in data/raw/.
 
 Usage:
@@ -12,16 +13,24 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.pipeline.datascrape import PokeApiScraper
+from src.pipeline.datascrape import BulbapediaScraper, PokeApiScraper
 
 
 def main() -> None:
     list_path = Path(__file__).parent / "raw" / "pokeapi_list.txt"
     out_dir = Path(__file__).parent / "raw"
 
-    with PokeApiScraper(list_path=list_path) as scraper:
-        records = scraper.fetch_all(save=True)
-        scraper.save_metadata(records, out_dir / "pokeapi_metadata.json")
+    with PokeApiScraper(list_path=list_path) as pokeapi_scraper:
+        records = pokeapi_scraper.fetch_all(save=True)
+
+    with BulbapediaScraper(list_path=list_path) as bulbapedia_scraper:
+        biology_data = bulbapedia_scraper.fetch_all()
+
+    for record in records:
+        record.biology = biology_data.get(record.name)
+
+    with PokeApiScraper(list_path=list_path) as pokeapi_scraper:
+        pokeapi_scraper.save_metadata(records, out_dir / "pokeapi_metadata.json")
 
 
 if __name__ == "__main__":
