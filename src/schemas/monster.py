@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 
 class MonsterMetadata(BaseModel):
     monster_id: str = Field(..., description="Unique alphanumeric identifier.")
+    monster_source: str = Field(..., description="Creative universe where the monster originated.")
     name: str = Field(..., description="Name of the creature asset.")
     description: str = Field(
         ...,
