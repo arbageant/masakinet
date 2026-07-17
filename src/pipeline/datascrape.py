@@ -194,7 +194,7 @@ class BulbapediaScraper:
             if element.name == "h2":
                 break
             if element.name == "p":
-                text = element.get_text(strip=True)
+                text = " ".join(element.get_text(separator=" ").split())
                 if text:
                     paragraphs.append(text)
 
