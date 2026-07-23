@@ -47,7 +47,13 @@ class EmbeddingService:
 
         with torch.no_grad():
             # Get text features mapped to the joint vision-text space
-            text_features = self.model.get_text_features(**inputs)
+            text_output = self.model.get_text_features(**inputs)
+
+            # Some model variants return a BaseModelOutputWithPooling instead of a tensor
+            if isinstance(text_output, torch.Tensor):
+                text_features = text_output
+            else:
+                text_features = text_output.pooler_output
 
             # L2 normalize embeddings for standard cosine/inner-product similarity search
             normalized_features = F.normalize(text_features, p=2, dim=-1)
@@ -65,7 +71,13 @@ class EmbeddingService:
 
         with torch.no_grad():
             # Get image features mapped to the joint vision-text space
-            image_features = self.model.get_image_features(**inputs)
+            image_output = self.model.get_image_features(**inputs)
+
+            # Some model variants return a BaseModelOutputWithPooling instead of a tensor
+            if isinstance(image_output, torch.Tensor):
+                image_features = image_output
+            else:
+                image_features = image_output.pooler_output
 
             # L2 normalize embeddings
             normalized_features = F.normalize(image_features, p=2, dim=-1)
