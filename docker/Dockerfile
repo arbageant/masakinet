@@ -1,6 +1,7 @@
 # Multi-stage production container build.
 # Build from the repo root: `docker build -f docker/Dockerfile .`
 # See design-doc.md §4.2 for rationale.
+# TODO: fix python versions to >=3.12
 
 # --- Stage 1: Build & Compilation Dependencies ---
 FROM python:3.11-slim AS builder
