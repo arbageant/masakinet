@@ -50,7 +50,7 @@ def query_similar(
 ) -> list:
     """Query the collection for nearest neighbors, optionally filtered by payload."""
     return client.query_points(
-        collection=collection_name,
+        collection_name=collection_name,
         query=vector,
         query_filter=filters,
         limit=top_k,

@@ -15,6 +15,5 @@ def client() -> TestClient:
 
 @pytest.fixture
 def mock_qdrant_client():
-    """Placeholder fixture for a mocked Qdrant client, to be filled in with
-    a fake/in-memory client once src.db.client is implemented."""
-    raise QdrantClient(":memory:")
+    """Mock Qdrant client for unit tests (uses in-memory storage)."""
+    return QdrantClient(":memory:")
