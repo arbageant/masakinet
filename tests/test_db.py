@@ -100,3 +100,75 @@ def test_query_with_filters(mock_qdrant_client, collection_name):
 
     assert len(results) == 1
     assert results[0].id == 1
+
+
+@pytest.mark.integration
+class TestQdrantIntegration:
+    """Tests against real Qdrant Docker container."""
+
+    @pytest.fixture(autouse=True)
+    def setup_and_teardown(self, real_qdrant_client):
+        """Create a unique collection per test, delete after."""
+        self.client = real_qdrant_client
+        self.collection = "integration_test_monsters"
+        try:
+            self.client.delete_collection(self.collection)
+        except Exception:
+            pass
+        create_collection(self.client, self.collection, vector_size=4)
+        yield
+        self.client.delete_collection(self.collection)
+
+    def test_create_and_list_collection(self):
+        collections = [c.name for c in self.client.get_collections().collections]
+        assert self.collection in collections
+
+    def test_upsert_and_query_monster(self):
+        """Upsert a monster and query it back."""
+        upsert_monster(
+            self.client,
+            1,
+            [1.0, 0.0, 0.0, 0.0],
+            {"name": "Pikachu", "primary_type": "Electric", "base_level": 25},
+            self.collection,
+        )
+        results = query_similar(
+            self.client,
+            [1.0, 0.0, 0.0, 0.0],
+            top_k=1,
+            collection_name=self.collection,
+        )
+        assert len(results) == 1
+        assert results[0].id == 1
+
+    def test_query_with_type_filter(self):
+        from qdrant_client.models import Filter, FieldCondition, MatchValue
+
+        upsert_monster(self.client, 1, [1.0, 0.0, 0.0, 0.0],
+            {"name": "Firemon", "primary_type": "Fire"}, self.collection)
+        upsert_monster(self.client, 2, [0.0, 1.0, 0.0, 0.0],
+            {"name": "Watermon", "primary_type": "Water"}, self.collection)
+
+        fire_filter = Filter(must=[
+            FieldCondition(key="primary_type", match=MatchValue(value="Fire"))
+        ])
+        results = query_similar(
+            self.client, [1.0, 0.0, 0.0, 0.0],
+            filters=fire_filter, top_k=10, collection_name=self.collection,
+        )
+        assert len(results) == 1
+        assert results[0].payload["primary_type"] == "Fire"
+
+    def test_upsert_updates_existing_point(self):
+        """Upserting same ID replaces the payload."""
+        upsert_monster(self.client, 1, [1.0, 0.0, 0.0, 0.0],
+            {"name": "Old", "base_level": 1}, self.collection)
+        upsert_monster(self.client, 1, [1.0, 0.0, 0.0, 0.0],
+            {"name": "New", "base_level": 50}, self.collection)
+
+        results = query_similar(
+            self.client, [1.0, 0.0, 0.0, 0.0],
+            top_k=1, collection_name=self.collection,
+        )
+        assert results[0].payload["name"] == "New"
+        assert results[0].payload["base_level"] == 50

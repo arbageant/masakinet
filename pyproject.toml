@@ -44,4 +44,7 @@ disallow_untyped_defs = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["slow: marks tests that make real HTTP requests (deselect with '-m \"not slow\"')"]
+    markers = [
+        "slow: marks tests that make real HTTP requests (deselect with '-m \"not slow\"')",
+        "integration: marks tests that require running Docker services (deselect with '-m \"not integration\"')",
+    ]
