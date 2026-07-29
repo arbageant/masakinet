@@ -13,6 +13,7 @@ from src.schemas.monster import MonsterMetadata
 def test_monster_metadata_valid():
     monster = MonsterMetadata(
         monster_id="m001",
+        monster_source="test",
         name="Emberling",
         description="A small fire-type creature.",
         primary_type="Fire",
@@ -26,6 +27,7 @@ def test_monster_metadata_rejects_out_of_range_level():
     with pytest.raises(ValidationError):
         MonsterMetadata(
             monster_id="m002",
+            monster_source="test",
             name="Overleveled",
             description="Too strong.",
             primary_type="Fire",
