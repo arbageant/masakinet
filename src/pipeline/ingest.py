@@ -4,20 +4,39 @@ Design ref: design-doc.md §5.2 Weeks 3-4 — extract embeddings from raw
 paired creature assets and load them into the vector DB (and eventually
 an S3/GCS bucket for the raw source assets).
 
-Usage (once implemented):
+Usage:
     poetry run python -m src.pipeline.ingest
 """
 
-from torch.utils.data import DataLoader
+import io
 
+from PIL import Image
+
+from src.db.client import get_qdrant_client
+from src.db.operations import create_collection, upsert_monster
 from src.pipeline.dataset import MonsterDataset
+from src.services.embeddings import EmbeddingService
 
 
 def run_ingest() -> None:
     """Batch-embed the raw dataset and upsert vectors + payloads into Qdrant."""
+    client = get_qdrant_client()
+    embedder = EmbeddingService()
     dataset = MonsterDataset()
-    _loader = DataLoader(dataset, batch_size=32)
-    raise NotImplementedError
+
+    create_collection(client)
+
+    for image, metadata in dataset:
+        buf = io.BytesIO()
+        image.save(buf, format="PNG")
+        image_bytes = buf.getvalue()
+
+        vector = embedder.embed_image(image_bytes)
+        payload = metadata.model_dump()
+
+        upsert_monster(client, metadata.monster_id, vector, payload)
+
+    print(f"Ingested {len(dataset)} monsters into Qdrant.")
 
 
 if __name__ == "__main__":
