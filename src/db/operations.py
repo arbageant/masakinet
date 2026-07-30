@@ -3,6 +3,8 @@
 Design ref: design-doc.md §2.1 — combines vector search (Cosine/Dot Product)
 with metadata payload filters (e.g., creature type, level).
 """
+import uuid
+
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, Filter, PointStruct, VectorParams
 from src.config import settings
@@ -26,7 +28,7 @@ def create_collection(
 
 def upsert_monster(
         client: QdrantClient,
-        monster_id: str,
+        monster_id: int | str | uuid.UUID,
         vectors: dict[str, list[float]],
         payload: dict,
         collection_name: str = settings.qdrant_collection_name,

@@ -9,6 +9,7 @@ Usage:
 """
 
 import io
+import uuid
 
 from PIL import Image
 
@@ -26,6 +27,8 @@ def run_ingest() -> None:
 
     create_collection(client)
 
+    namespace = uuid.uuid5(uuid.NAMESPACE_DNS, "masakinet")
+
     for image, metadata in dataset:
         buf = io.BytesIO()
         image.save(buf, format="PNG")
@@ -38,9 +41,11 @@ def run_ingest() -> None:
 
         payload = metadata.model_dump()
 
+        point_id = uuid.uuid5(namespace, metadata.monster_id)
+
         upsert_monster(
             client,
-            metadata.monster_id,
+            point_id,
             {"image": image_vector, "text": text_vector},
             payload,
         )
