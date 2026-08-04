@@ -10,3 +10,10 @@ def test_health_check(client):
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+
+def test_generate_image_endpoint(client):
+    response = client.post("/generate/image", json={"prompt": "a fire creature", "tags": ["fire"]})
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/png"
+    assert response.content.startswith(b"\x89PNG")
