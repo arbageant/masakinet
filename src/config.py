@@ -23,5 +23,9 @@ class Settings(BaseSettings):
     # --- Model paths / identifiers (placeholders) ---
     clip_model_name: str = "openai/clip-vit-base-patch32"
 
+    # --- Generation ---
+    generation_grid_size: int = 32
+    generation_seed: int | None = None
+
 
 settings = Settings()
