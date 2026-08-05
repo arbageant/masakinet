@@ -8,6 +8,7 @@ Usage:
 """
 
 import json
+import logging
 import time
 from pathlib import Path
 from typing import Optional
@@ -16,6 +17,8 @@ from urllib.parse import quote
 import httpx
 from bs4 import BeautifulSoup
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
 
 
 class PokeApiData(BaseModel):
@@ -83,10 +86,18 @@ class PokeApiScraper:
     def _parse_types(self, pokemon: dict) -> list[str]:
         return [t["type"]["name"] for t in pokemon.get("types", [])]
 
-    def fetch_one(self, name: str) -> PokeApiData:
-        """Fetch all fields for a single Pokemon by name."""
-        pokemon = self._get_pokemon(name)
-        species = self._get_species(name)
+    def fetch_one(self, name: str) -> Optional[PokeApiData]:
+        """Fetch all fields for a single Pokemon by name.
+
+        Returns None (instead of raising) if the Pokemon name cannot be
+        resolved against PokeAPI, e.g. due to incorrect formatting/casing.
+        """
+        try:
+            pokemon = self._get_pokemon(name)
+            species = self._get_species(name)
+        except httpx.HTTPError:
+            logger.warning("Skipping '%s': PokeAPI returned an error for this name.", name)
+            return None
 
         return PokeApiData(
             name=pokemon["name"],
@@ -95,8 +106,11 @@ class PokeApiScraper:
             image_url=self._pick_image_url(pokemon),
         )
 
-    def download_image(self, data: PokeApiData, out_dir: Path | str = "data/raw") -> Path:
-        """Download the Pokemon image and return the local path."""
+    def download_image(self, data: PokeApiData, out_dir: Path | str = "data/raw") -> Optional[Path]:
+        """Download the Pokemon image and return the local path.
+
+        Returns None (instead of raising) if the image cannot be retrieved.
+        """
         out_dir = Path(out_dir)
         out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -106,22 +120,35 @@ class PokeApiScraper:
         if dest.exists():
             return dest
 
-        resp = self._client.get(data.image_url)
-        resp.raise_for_status()
+        try:
+            resp = self._client.get(data.image_url)
+            resp.raise_for_status()
+        except httpx.HTTPError:
+            logger.warning("Skipping image for '%s': could not download.", data.name)
+            return None
         dest.write_bytes(resp.content)
         return dest
 
     def fetch_all(self, save: bool = True) -> list[PokeApiData]:
-        """Fetch every Pokemon in the list file."""
+        """Fetch every Pokemon in the list file, skipping names that fail."""
         names = self._read_names()
         results: list[PokeApiData] = []
 
         for name in names:
             data = self.fetch_one(name)
+            if data is None:
+                continue
             if save:
                 data.image_path = self.download_image(data)
             results.append(data)
 
+        if len(results) < len(names):
+            logger.warning(
+                "Fetched %d of %d Pokemon (%d skipped).",
+                len(results),
+                len(names),
+                len(names) - len(results),
+            )
         return results
 
     def save_metadata(self, records: list[PokeApiData], out_path: Path | str = "data/raw/pokeapi_metadata.json") -> Path:
